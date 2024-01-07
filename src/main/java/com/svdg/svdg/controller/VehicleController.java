@@ -11,6 +11,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.Date;
@@ -22,13 +24,15 @@ import java.util.Objects;
 @RequestMapping("/svdg/")
 public class VehicleController {
 
-    //    @Autowired
-//    private ReferenceDataService referenceDataService;
     @Autowired
     private VehicleService vehicleService;
     @Autowired
     private VehicleServiceUtil vehicleServiceUtil;
 
+    /*
+    This api will save the vehicle data in the database. VIN, Registration number and engine number should be
+    unique.
+     */
     @PostMapping("/saveVehicle")
     public ResponseEntity<?> saveVehicleData(@Valid @RequestBody AddVehicleDataRequestDto addVehicleDataRequestDto) throws HttpMessageNotReadableException, VinAlreayExistsException, RegNoAlreadyExistsException, SQLException {
         AddVehicleDataResponseDto addVehicleDataResponseDto = new AddVehicleDataResponseDto();
@@ -53,11 +57,13 @@ public class VehicleController {
             return new ResponseEntity<>(addVehicleDataFailedResponseDto, HttpStatus.BAD_REQUEST);
         }
     }
-
+    /*
+    This api will return all the data present in the database. It uses pagination to break down the record into small sets.
+    User can pass the page number and size of page.
+    */
 
     @GetMapping("/getAllVehicleData")
-    public ResponseEntity<List<VehicleModel>> getVehicleData(@RequestParam(value = "page", required = false) Integer page,
-                                                             @RequestParam(value = "limit", required = false) Integer limit) {
+    public ResponseEntity<List<VehicleModel>> getVehicleData(@RequestParam(value = "page", required = false) Integer page, @RequestParam(value = "limit", required = false) Integer limit) {
         long startTime = System.currentTimeMillis();
         Integer pageValue = Objects.isNull(page) || page <= 0 ? 0 : page;
         Integer limitValue = Objects.isNull(limit) || limit <= 0 ? 10 : limit;
@@ -66,14 +72,9 @@ public class VehicleController {
         return new ResponseEntity<>(vehicleModels, HttpStatus.OK);
 
     }
-
-//    @GetMapping("/getReferenceData")
-//    public ResponseEntity<ReferenceData> getReferenceData(@RequestParam("id") Long id) {
-//        ReferenceData referenceData = referenceDataService.getReferenceData(id);
-//        if (referenceData != null)
-//            return new ResponseEntity<>(referenceData, HttpStatus.OK);
-//        else return new ResponseEntity<>(null, HttpStatus.NOT_FOUND);
-//    }
+    /*
+    This api will delete the record of vehicle data from the database corresponding to the unique VIN passed as the request parameter
+     */
 
     @DeleteMapping("/deleteData")
     public ResponseEntity<?> deleteVehicleData(@RequestParam String vin) throws VinNotValidException {
@@ -89,6 +90,9 @@ public class VehicleController {
             throw new VinNotValidException(vin);
         }
     }
+    /*
+    This api can be used when we want to fetch the vehicle data. We need to pass the VIN as the path variable.
+     */
 
     @GetMapping("/getVehicleDataByVin/{vin}")
     public ResponseEntity<?> getDataByVin(@PathVariable String vin) throws VinNotValidException {
@@ -99,6 +103,12 @@ public class VehicleController {
             throw new VinNotValidException("Enter valid Vin");
         }
     }
+    /*
+    If user want to update any particular vehicle date it just needs to pass the vin and the update request body.
+    Program will firstly check the validity of the VIN and then will check if the VIN is present in the database. If it is
+    present in the database. It will fetch that record and then update the record with the new values passed in the request body.
+    NOTE: The program will only update the data if it is valid.
+     */
 
     @PutMapping("/updateVehicleData/{vin}")
     public ResponseEntity<?> updateVehicleData(@Valid @PathVariable("vin") String vin, @RequestBody UpdateVehicleDataRequestDto updateVehicleDataRequestDto) throws VinNotValidException {
@@ -131,17 +141,26 @@ public class VehicleController {
         } else throw new VinNotValidException(vin + " is not valid");
     }
 
-    //    @PostMapping("/uploadData")
-//    public ResponseEntity<List<VehicleModel>> excelToObjConvertor() throws IOException, NoSuchFieldException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, SQLException {
-//        Long startTime = System.currentTimeMillis();
-//        List<VehicleModel> list = this.vehicleService.uploadData();
-//
-//        for(VehicleModel vehicleModel: list){
-//            this.vehicleService.saveVehicle(vehicleModel);
-//        }
-//        System.out.println(System.currentTimeMillis()-startTime);
-//            return new ResponseEntity<>(list,HttpStatus.OK);
-//    }
+    /*
+    Created an API , calling upon which will read the Excel workbook present in the /src/main/resource/template
+    and from those values it will create a vehicle date object and the save it in the database.
+    It can be used when we want to create a bulk of synthetic data and save it in the database, we only need to modify the
+    Excel workbook.
+     */
+    @PostMapping("/uploadData")
+    public ResponseEntity<List<VehicleModel>> excelToObjConvertor() throws IOException, NoSuchFieldException, InvocationTargetException, NoSuchMethodException, InstantiationException, IllegalAccessException, SQLException {
+        Long startTime = System.currentTimeMillis();
+        List<VehicleModel> list = this.vehicleService.uploadData();
+
+        for (VehicleModel vehicleModel : list) {
+            this.vehicleService.saveVehicle(vehicleModel);
+        }
+        System.out.println(System.currentTimeMillis() - startTime);
+        return new ResponseEntity<>(list, HttpStatus.OK);
+    }
+    /*
+    This api will take only one parameter limit. And will return that much vehicle date randomly from the database.
+     */
 
     @GetMapping("/getVehicleData/{limit}")
     public ResponseEntity<List<VehicleModel>> getVehicleData(@PathVariable("limit") Integer limit) {
