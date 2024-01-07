@@ -338,7 +338,7 @@ public class VehicleServiceImpl implements VehicleService {
 
     @Override
     public List<VehicleModel> uploadData() throws IOException, NoSuchMethodException, InvocationTargetException, InstantiationException, IllegalAccessException, NoSuchFieldException {
-        Workbook workbook = WorkbookFactory.create(new File("D:\\NewWorkSpace\\SVDG\\src\\main\\resources\\templates\\AjaySyntheticVehicleData.xlsx"));
+        Workbook workbook = WorkbookFactory.create(new File("D:\\NewWorkSpace\\SVDG\\src\\main\\resources\\templates\\SyntheticVehicleData.xlsx"));
         Sheet sheet = workbook.getSheet("VehicleModel");
         Row headRow = sheet.getRow(0);
         Iterator<Cell> cellIterator = headRow.cellIterator();
